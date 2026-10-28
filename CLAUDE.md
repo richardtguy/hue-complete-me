@@ -91,10 +91,10 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
   `top = lerp(TL, TR, u)`, `bottom = lerp(BL, BR, u)`, `colour = lerp(top, bottom, v)`.
 - Convert back to sRGB for display. Clamp out-of-gamut colours by reducing OKLCH chroma at constant L and h, not by naively clipping channels.
 - **Palette generation** (`randomCorners(rng)`):
-  - Choose a random base hue and place the four corners about 90° apart (±20° jitter), in a random order.
+  - Choose a random base hue and place the four corners about 90° apart (±20° jitter), **in order around the square** (TL→TR→BR→BL), with a random starting corner and direction. Diagonal lightness cancels along the middle row and column, so hue is the only difference there. Other arrangements can cancel the hue difference too and leave identical neighbours: only about 34% of random arrangements pass validation, against about 99% for cyclic ones.
   - Vary lightness across the corners: one diagonal pair lighter (L ≈ 0.75–0.88) and the other darker (L ≈ 0.45–0.6). This gives the grid a luminance gradient as well as a hue gradient.
   - Use chroma that is as high as fits in gamut, around 0.10–0.18.
-  - Validate the result. Compute the OKLab ΔE between every pair of horizontally and vertically adjacent tiles. If the minimum is below a threshold (start at about 0.03 and tune by eye), regenerate. The puzzle must be solvable by eye.
+  - Validate the result. Compute the OKLab ΔE between every pair of horizontally and vertically adjacent tiles. If the minimum is below `MIN_NEIGHBOUR_DELTA_E` (0.03, to be tuned by eye in milestone 9), regenerate, up to 50 attempts, keeping the best. The puzzle must be solvable by eye. Typical minimum ΔE is about 0.04, limited by the hue-only steps in the middle row and column.
 - Pre-compute the 25 solved colours once per game and store them with the save.
 
 ### Drag and swap (`useDragSwap.ts`)
