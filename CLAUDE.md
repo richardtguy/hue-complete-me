@@ -106,15 +106,16 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 
 - Use Pointer Events only (`pointerdown/move/up/cancel`) with `setPointerCapture`. The board has `touch-action: none` so the page doesn't scroll or zoom while dragging.
 - On drag start, lift the tile with `scale(1.08)`, a shadow and a raised z-index. While dragging it follows the pointer through `transform: translate(...)` set directly on the element. Don't call React setState per pointermove, because it causes jank.
-- Hit-test the drop target from the pointer position against the cached board rect (`Math.floor` on row and column). Don't use `elementFromPoint`, because the dragged tile sits under the finger. Highlight the current target tile.
+- Hit-test the drop target with `positionAt` (in `puzzle.ts`) from the pointer position against the board rect cached at drag start. Don't use `elementFromPoint`, because the dragged tile sits under the finger. The current target tile shrinks to `scale(0.9)` and gets a ring.
 - **On drop over a valid, different interior tile**, swap with FLIP:
   1. Record the screen rects of both elements.
-  2. Commit the swap to state.
-  3. In `useLayoutEffect`, apply inverse transforms, then on the next frame transition to `transform: none`. Use about 220 ms with `cubic-bezier(.2,.8,.2,1)`.
+  2. Commit the swap inside `flushSync`, so React updates the DOM synchronously, then clear the dragged tile's inline transform and measure both rects again.
+  3. Apply the inverse transforms and transition to `transform: none` over 220 ms with `cubic-bezier(.2,.8,.2,1)`.
      The dragged tile settles from where the finger released it, and the displaced tile glides to the vacated slot.
 - **On drop anywhere else** (a corner, outside the board or the same slot), animate the tile back to its home.
-- Ignore new drags while a swap animation is running. Cancel cleanly on `pointercancel`.
-- Respect `prefers-reduced-motion`. Use a short fade or no transition instead of motion.
+- Ignore new drags while a swap or snap-back animation is running. Animations end on a timer, not `transitionend`, which doesn't fire when nothing moves. Cancel cleanly on `pointercancel` or `lostpointercapture`.
+- **Drag state lives in `data-*` attributes, not classes**: `data-drag="lifted|settling|displaced"` and `data-target`. React rewrites `className` when a tile re-renders, for example when it becomes correct mid-swap, which would wipe classes added imperatively.
+- Respect `prefers-reduced-motion`. Settling is instant (0 ms) and the lift isn't animated; the tile still follows the finger, because that is direct manipulation.
 
 ### Feedback
 

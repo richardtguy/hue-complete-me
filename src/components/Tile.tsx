@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import './Tile.css';
 
 interface TileProps {
+  /** Tile id: the position this tile belongs in. */
+  id: number;
   /** CSS colour of the tile. */
   colour: string;
   row: number;
@@ -13,7 +15,7 @@ interface TileProps {
   darkInk: boolean;
 }
 
-export default function Tile({ colour, row, col, fixed, correct, darkInk }: TileProps) {
+export default function Tile({ id, colour, row, col, fixed, correct, darkInk }: TileProps) {
   const style = {
     '--tile-colour': colour,
     gridRow: row + 1,
@@ -35,7 +37,7 @@ export default function Tile({ colour, row, col, fixed, correct, darkInk }: Tile
     .join(' ');
 
   return (
-    <div className={className} style={style} role="img" aria-label={label}>
+    <div className={className} style={style} role="img" aria-label={label} data-tile={id}>
       {correct && !fixed && <span className="tile__dot" aria-hidden="true" />}
     </div>
   );

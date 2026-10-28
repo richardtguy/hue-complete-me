@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { needsDarkInk, toCss, type Oklab } from '../game/colour.ts';
 import { type Board as BoardState, isCorner, isCorrect, rowCol } from '../game/puzzle.ts';
+import { useDragSwap } from '../hooks/useDragSwap.ts';
 import Tile from './Tile.tsx';
 import './Board.css';
 
@@ -7,9 +9,14 @@ interface BoardProps {
   board: BoardState;
   /** Solved colour of each tile, indexed by tile id. */
   colours: readonly Oklab[];
+  onSwap: (a: number, b: number) => void;
+  disabled: boolean;
 }
 
-export default function Board({ board, colours }: BoardProps) {
+export default function Board({ board, colours, onSwap, disabled }: BoardProps) {
+  const boardRef = useRef<HTMLDivElement>(null);
+  const { onPointerDown } = useDragSwap({ boardRef, board, onSwap, disabled });
+
   // Render tiles in tile-id order and place them with grid coordinates, so a tile's DOM
   // element stays the same when it moves. Dragging and swap animations rely on this.
   const positionOf: number[] = [];
@@ -18,13 +25,20 @@ export default function Board({ board, colours }: BoardProps) {
   });
 
   return (
-    <div className="board" role="group" aria-label="Puzzle board">
+    <div
+      ref={boardRef}
+      className="board"
+      role="group"
+      aria-label="Puzzle board"
+      onPointerDown={onPointerDown}
+    >
       {colours.map((colour, tile) => {
         const pos = positionOf[tile]!;
         const { row, col } = rowCol(pos);
         return (
           <Tile
             key={tile}
+            id={tile}
             colour={toCss(colour)}
             row={row}
             col={col}

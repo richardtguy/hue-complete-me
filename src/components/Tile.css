@@ -2,6 +2,9 @@
   position: relative;
   border-radius: var(--tile-radius);
   background: var(--tile-colour);
+  transition:
+    transform 150ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
 }
 
 .tile--light-ink {
@@ -25,4 +28,32 @@
   inset: 43%;
   border-radius: 50%;
   background: var(--ink);
+}
+
+.tile:not(.tile--fixed) {
+  cursor: grab;
+}
+
+.tile[data-drag='displaced'] {
+  z-index: 1;
+}
+
+.tile[data-drag='lifted'],
+.tile[data-drag='settling'] {
+  z-index: 2;
+}
+
+.tile[data-drag='lifted'] {
+  cursor: grabbing;
+  box-shadow:
+    0 12px 28px rgb(0 0 0 / 0.28),
+    0 3px 8px rgb(0 0 0 / 0.18);
+}
+
+/* The tile that will swap if the pointer is released now: it shrinks to make room. */
+.tile[data-target] {
+  transform: scale(0.9);
+  box-shadow:
+    0 0 0 calc(var(--board-size) * 0.006) var(--bg),
+    0 0 0 calc(var(--board-size) * 0.014) var(--text-muted);
 }

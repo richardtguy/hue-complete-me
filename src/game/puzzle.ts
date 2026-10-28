@@ -23,6 +23,15 @@ export function rowCol(pos: number): { row: number; col: number } {
   return { row: Math.floor(pos / N), col: pos % N };
 }
 
+/**
+ * The position under a point given as a fraction of the board's width and height, or null
+ * if the point is off the board.
+ */
+export function positionAt(x: number, y: number): number | null {
+  if (x < 0 || x >= 1 || y < 0 || y >= 1) return null;
+  return Math.floor(y * N) * N + Math.floor(x * N);
+}
+
 export function solvedBoard(): number[] {
   return Array.from({ length: SIZE }, (_, i) => i);
 }

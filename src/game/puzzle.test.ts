@@ -7,6 +7,7 @@ import {
   isCorner,
   isCorrect,
   isSolved,
+  positionAt,
   rowCol,
   scramble,
   solvedBoard,
@@ -26,6 +27,22 @@ describe('board geometry', () => {
     expect(rowCol(N - 1)).toEqual({ row: 0, col: N - 1 });
     expect(rowCol(7)).toEqual({ row: 1, col: 2 });
     expect(rowCol(SIZE - 1)).toEqual({ row: N - 1, col: N - 1 });
+  });
+});
+
+describe('positionAt', () => {
+  it('maps fractional board coordinates to positions', () => {
+    expect(positionAt(0, 0)).toBe(0);
+    expect(positionAt(0.99, 0)).toBe(4);
+    expect(positionAt(0.5, 0.5)).toBe(12);
+    expect(positionAt(0.21, 0.19)).toBe(1);
+    expect(positionAt(0.999, 0.999)).toBe(24);
+  });
+
+  it('returns null off the board', () => {
+    expect(positionAt(-0.01, 0.5)).toBeNull();
+    expect(positionAt(1, 0.5)).toBeNull();
+    expect(positionAt(0.5, 1.2)).toBeNull();
   });
 });
 

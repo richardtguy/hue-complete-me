@@ -6,4 +6,6 @@
   width: var(--board-size);
   height: var(--board-size);
   --tile-radius: calc(var(--board-size) * 0.022);
+  /* Pointer drags move tiles, never the page. */
+  touch-action: none;
 }
