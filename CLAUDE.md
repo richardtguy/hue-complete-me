@@ -101,7 +101,7 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
   - Vary lightness across the corners: one diagonal pair lighter (L ≈ 0.75–0.88) and the other darker (L ≈ 0.45–0.6). This gives the grid a luminance gradient as well as a hue gradient.
   - Use chroma that is as high as fits in gamut, around 0.10–0.18.
   - Validate the result. Compute the OKLab ΔE between every pair of horizontally and vertically adjacent tiles. If the minimum is below `MIN_NEIGHBOUR_DELTA_E` (0.03, to be tuned by eye in milestone 9), regenerate, up to 50 attempts, keeping the best. The puzzle must be solvable by eye. Typical minimum ΔE is about 0.04, limited by the hue-only steps in the middle row and column.
-- Pre-compute the 25 solved colours once per game and store them with the save.
+- Pre-compute the 25 solved colours once per game (`generatePalette`) and store them with the save.
 
 ### Drag and swap (`useDragSwap.ts`)
 
@@ -128,9 +128,11 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 
 ### Persistence (`storage.ts`)
 
-- The localStorage key is `hue-complete-me:v1`. The value is `{ version: 1, corners, board, solved }`.
-- Save after every swap and on new game. Load on startup and validate the shape. On any error or mismatch, start a fresh game.
-- Wrap every storage access in try/catch, because private mode or blocked storage can throw.
+- The localStorage key is `hue-complete-me:v1`. The value is `{ version: 1, colours, board }`. `colours` holds the 25 solved OKLab colours (not just the corners), so a resumed game looks identical even if the palette code changes. `solved` isn't stored, because it's derived from `board`.
+- `storage.ts` stays free of DOM globals. `loadGame(storage)` and `saveGame(storage, game)` take a `Storage | undefined`, and `App` passes `window.localStorage`, using `undefined` if even accessing it throws.
+- `parseSave` validates everything: the version, 25 finite OKLab colours, and a board that is a permutation of 0–24 with the corners in place. Anything else returns `null`.
+- `App` saves in an effect whenever `game` changes, which covers every swap and new game. On startup it resumes the save unless there is none, it's invalid, or **it's already solved**; in those cases it starts a new game rather than replaying the win sequence.
+- `loadGame` and `saveGame` never throw. Private mode, blocked storage or a full quota just means no saving.
 
 ## UI and visual design
 

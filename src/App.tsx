@@ -1,17 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Board from './components/Board.tsx';
 import WinOverlay from './components/WinOverlay.tsx';
-import type { Oklab } from './game/colour.ts';
 import { generatePalette } from './game/palette.ts';
-import { type Board as BoardState, isSolved, scramble, swap, swapOutcome } from './game/puzzle.ts';
+import { isSolved, scramble, swap, swapOutcome } from './game/puzzle.ts';
 import { mulberry32 } from './game/random.ts';
+import { type Game, loadGame, saveGame } from './game/storage.ts';
 import { success, tap } from './lib/haptics.ts';
 import './App.css';
-
-interface Game {
-  colours: Oklab[];
-  board: BoardState;
-}
 
 function newGame(): Game {
   const seed = crypto.getRandomValues(new Uint32Array(1))[0]!;
@@ -20,8 +15,24 @@ function newGame(): Game {
   return { colours, board: scramble(rng) };
 }
 
+/** localStorage, or undefined where even accessing it throws (some privacy modes). */
+function storage(): Storage | undefined {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Resumes the saved game, unless there is none or it was already solved. */
+function initialGame(): Game {
+  const saved = loadGame(storage());
+  return saved && !isSolved(saved.board) ? saved : newGame();
+}
+
 export default function App() {
-  const [game, setGame] = useState(newGame);
+  const [game, setGame] = useState(initialGame);
+  useEffect(() => saveGame(storage(), game), [game]);
   const solved = isSolved(game.board);
   const startNewGame = () => setGame(newGame());
   const handleSwap = useCallback(
