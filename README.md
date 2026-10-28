@@ -1,5 +1,7 @@
 # Hue Complete Me
 
+**Play: https://richardtguy.github.io/hue-complete-me/**
+
 A calm colour-gradient puzzle for your phone.
 
 The board is a 5×5 grid. The four corner tiles are fixed, each a different, contrasting colour. Every other tile belongs somewhere on the smooth gradient that blends between those corners, but the tiles start scrambled. Drag tiles to swap them until the whole gradient falls into place.
@@ -34,7 +36,7 @@ Static single-page app with no backend.
 
 ## Development
 
-Requires Node.js 20+.
+Requires Node.js 22 (or 20.19+).
 
 ```bash
 npm install
@@ -44,6 +46,7 @@ npm test             # run unit tests
 npm run lint         # lint
 npm run build        # production build to dist/
 npm run preview      # preview the production build
+npm run icons        # regenerate the PWA icons from public/icon.svg
 ```
 
 Haptics and the PWA install prompt need a real device. The service worker only runs in the production build (`npm run build && npm run preview`).
@@ -63,7 +66,7 @@ See [CLAUDE.md](./CLAUDE.md) for the detailed design and build plan.
 
 ## Deployment
 
-Each push to `main` is built and deployed to **GitHub Pages** by `.github/workflows/deploy.yml`. In the repository settings, set Pages to deploy from **GitHub Actions**. The site is served from `/hue-complete-me/`.
+`.github/workflows/deploy.yml` runs lint, tests and a build on every pull request. Each push to `main` is also deployed to **GitHub Pages** (repository settings → Pages → Source: **GitHub Actions**). The site is served from `/hue-complete-me/`.
 
 ## Roadmap
 
