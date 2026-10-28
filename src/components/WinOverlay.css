@@ -19,7 +19,7 @@
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
   pointer-events: auto;
   /* After the win wave (see Board.css). Hidden, and so unclickable, until it starts. */
-  animation: overlay-in 420ms var(--ease-out) 1700ms backwards;
+  animation: overlay-in 420ms var(--ease-out) 1950ms backwards;
 }
 
 @keyframes overlay-in {
