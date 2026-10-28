@@ -15,35 +15,38 @@ in place.
 
 ## Decisions (agreed with the user)
 
-| Topic | Decision |
-|---|---|
-| Corner colours | Random each game, with guaranteed contrast (see *Palette generation*) |
-| Blending | Bilinear interpolation in **OKLab** |
-| Extras | Win animation and saved progress (localStorage). No move counter and no grid-size option for now. |
-| Hosting | GitHub Pages via GitHub Actions, as a PWA (manifest and service worker, offline play, add to home screen) |
+| Topic          | Decision                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| Corner colours | Random each game, with guaranteed contrast (see _Palette generation_)                                     |
+| Blending       | Bilinear interpolation in **OKLab**                                                                       |
+| Extras         | Win animation and saved progress (localStorage). No move counter and no grid-size option for now.         |
+| Hosting        | GitHub Pages via GitHub Actions, as a PWA (manifest and service worker, offline play, add to home screen) |
 
 Don't add features outside this list (move counter, timers, sizes, sound, accounts,
 analytics) unless the user asks.
 
 ## Tech stack
 
-- **Vite + React 18 + TypeScript** (strict mode)
+- **Vite 8 + React 19 + TypeScript 6.0** (strict mode, `noUncheckedIndexedAccess`)
+  - TypeScript is pinned to `~6.0` because typescript-eslint doesn't support TS 7 yet. Don't bump it until typescript-eslint does.
 - Plain CSS with custom properties (one global stylesheet plus a CSS file per component). No UI framework.
 - **No drag or animation libraries.** Use Pointer Events and CSS transforms/transitions with FLIP.
 - **vite-plugin-pwa** for the manifest and the Workbox service worker
 - **Vitest** for unit tests of the pure game logic
-- ESLint and Prettier with default configs
+- ESLint (flat config: typescript-eslint, react-hooks, react-refresh) and Prettier (single quotes, width 100)
 - npm as the package manager
+  - npm 10 crashes (`reading 'edgesOut'`) when adding vitest 4. Run `npx npm@11 install ...` to add or upgrade dev dependencies. `npm ci` and `npm install` from the lockfile work with npm 10.
 
 ## Commands
 
 ```bash
 npm install
-npm run dev        # Vite dev server (use --host to test on a phone over LAN)
+npm run dev        # Vite dev server at http://localhost:5173/hue-complete-me/ (--host for LAN)
 npm run build      # type-check + production build to dist/
 npm run preview    # serve dist/ locally
 npm test           # vitest run
-npm run lint
+npm run lint       # eslint + prettier --check
+npm run format     # prettier --write
 ```
 
 Before you commit, run `npm run lint`, `npm test` and `npm run build`. All three must pass.
@@ -103,7 +106,7 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
   1. Record the screen rects of both elements.
   2. Commit the swap to state.
   3. In `useLayoutEffect`, apply inverse transforms, then on the next frame transition to `transform: none`. Use about 220 ms with `cubic-bezier(.2,.8,.2,1)`.
-  The dragged tile settles from where the finger released it, and the displaced tile glides to the vacated slot.
+     The dragged tile settles from where the finger released it, and the displaced tile glides to the vacated slot.
 - **On drop anywhere else** (a corner, outside the board or the same slot), animate the tile back to its home.
 - Ignore new drags while a swap animation is running. Cancel cleanly on `pointercancel`.
 - Respect `prefers-reduced-motion`. Use a short fade or no transition instead of motion.
