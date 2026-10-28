@@ -3,16 +3,21 @@ import { type Board, CORNERS, SIZE } from './puzzle.ts';
 
 /** Everything needed to resume a game. */
 export interface Game {
+  /** The day this puzzle belongs to, as `YYYY-MM-DD` (see daily.ts). */
+  date: string;
   /** Solved colour of each tile, indexed by tile id. */
   colours: Oklab[];
   board: Board;
 }
 
-export const STORAGE_KEY = 'hue-complete-me:v1';
-const VERSION = 1;
+export const STORAGE_KEY = 'hue-complete-me:v2';
+/** Keys from earlier versions, removed on save. */
+const LEGACY_KEYS = ['hue-complete-me:v1'];
+const VERSION = 2;
 
-interface SaveV1 {
-  version: 1;
+interface SaveV2 {
+  version: 2;
+  date: string;
   colours: Oklab[];
   board: number[];
 }
@@ -41,15 +46,16 @@ export function parseSave(json: string | null): Game | null {
     return null;
   }
   if (typeof data !== 'object' || data === null) return null;
-  const { version, colours, board } = data as Record<string, unknown>;
+  const { version, date, colours, board } = data as Record<string, unknown>;
   if (version !== VERSION) return null;
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   if (!Array.isArray(colours) || colours.length !== SIZE || !colours.every(isOklab)) return null;
   if (!isBoard(board)) return null;
-  return { colours, board };
+  return { date, colours, board };
 }
 
-export function serialiseGame({ colours, board }: Game): string {
-  const save: SaveV1 = { version: VERSION, colours, board: [...board] };
+export function serialiseGame({ date, colours, board }: Game): string {
+  const save: SaveV2 = { version: VERSION, date, colours, board: [...board] };
   return JSON.stringify(save);
 }
 
@@ -66,6 +72,7 @@ export function loadGame(storage: Storage | undefined): Game | null {
 export function saveGame(storage: Storage | undefined, game: Game) {
   try {
     storage?.setItem(STORAGE_KEY, serialiseGame(game));
+    for (const key of LEGACY_KEYS) storage?.removeItem(key);
   } catch {
     // Private mode, blocked storage or quota exceeded: play on without saving.
   }
