@@ -2,8 +2,9 @@ import { useCallback, useState } from 'react';
 import Board from './components/Board.tsx';
 import type { Oklab } from './game/colour.ts';
 import { generatePalette } from './game/palette.ts';
-import { type Board as BoardState, isSolved, scramble, swap } from './game/puzzle.ts';
+import { type Board as BoardState, isSolved, scramble, swap, swapOutcome } from './game/puzzle.ts';
 import { mulberry32 } from './game/random.ts';
+import { success, tap } from './lib/haptics.ts';
 import './App.css';
 
 interface Game {
@@ -20,9 +21,17 @@ function newGame(): Game {
 
 export default function App() {
   const [game, setGame] = useState(newGame);
-  const handleSwap = useCallback((a: number, b: number) => {
-    setGame((g) => ({ ...g, board: swap(g.board, a, b) }));
-  }, []);
+  const handleSwap = useCallback(
+    (a: number, b: number) => {
+      const board = swap(game.board, a, b);
+      setGame({ ...game, board });
+      // Called from the pointerup handler, so haptics run inside the user gesture.
+      const outcome = swapOutcome(board, a, b);
+      if (outcome === 'solved') success();
+      else if (outcome === 'placed') tap();
+    },
+    [game],
+  );
 
   return (
     <div className="app">

@@ -28,6 +28,14 @@
   inset: 43%;
   border-radius: 50%;
   background: var(--ink);
+  /* Pops in as the tile lands: the swap animation takes about 220 ms. */
+  animation: dot-in 280ms cubic-bezier(0.3, 1.6, 0.5, 1) 120ms backwards;
+}
+
+@keyframes dot-in {
+  from {
+    transform: scale(0);
+  }
 }
 
 .tile:not(.tile--fixed) {

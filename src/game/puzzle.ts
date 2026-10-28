@@ -63,6 +63,15 @@ export function swap(board: Board, a: number, b: number): number[] {
   return next;
 }
 
+/**
+ * What a swap of positions `a` and `b` achieved on the resulting board: solved the puzzle,
+ * put at least one of the two tiles in place, or neither.
+ */
+export function swapOutcome(next: Board, a: number, b: number): 'solved' | 'placed' | 'none' {
+  if (isSolved(next)) return 'solved';
+  return isCorrect(next, a) || isCorrect(next, b) ? 'placed' : 'none';
+}
+
 export function isCorrect(board: Board, pos: number): boolean {
   return board[pos] === pos;
 }

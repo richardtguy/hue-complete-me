@@ -12,6 +12,7 @@ import {
   scramble,
   solvedBoard,
   swap,
+  swapOutcome,
 } from './puzzle.ts';
 import { mulberry32 } from './random.ts';
 
@@ -74,6 +75,28 @@ describe('swap', () => {
     expect(next[1]).toBe(7);
     expect(next[7]).toBe(1);
     expect(swap(next, 1, 7)).toEqual(board);
+  });
+});
+
+describe('swapOutcome', () => {
+  it('reports no progress, a placed tile, or a solve', () => {
+    const solved = solvedBoard();
+    // Three tiles in a cycle: 6 -> 7 -> 8 -> 6.
+    const cycled = [...solved];
+    [cycled[6], cycled[7], cycled[8]] = [8, 6, 7];
+
+    // Placing one tile of the cycle fixes exactly one position.
+    const once = swap(cycled, 6, 7);
+    expect(swapOutcome(once, 6, 7)).toBe('placed');
+
+    // The last swap of the cycle solves the board.
+    expect(swapOutcome(swap(once, 7, 8), 7, 8)).toBe('solved');
+
+    // Swapping two misplaced tiles that don't belong in each other's slots.
+    const scrambled = scramble(mulberry32(4));
+    const p = 6;
+    const q = INTERIOR.find((pos) => pos !== p && scrambled[pos] !== p && scrambled[p] !== pos)!;
+    expect(swapOutcome(swap(scrambled, p, q), p, q)).toBe('none');
   });
 });
 

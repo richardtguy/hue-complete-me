@@ -119,10 +119,10 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 
 ### Feedback
 
-- **Dot**: a correctly placed interior tile shows a small centred dot, about 14% of the tile width. Choose white or near-black for the dot based on the tile's OKLab L. The dot appears with a short scale-in. Corners show no dot. Mark them as fixed with a subtly different treatment, such as a slightly smaller radius or an inset ring.
-- **Haptics** (`haptics.ts`): after each swap, if either swapped tile became correct, call `tap()`. When the board is solved, call `success()`.
+- **Dot**: a correctly placed interior tile shows a small centred dot, about 14% of the tile width. Choose white or near-black for the dot based on the tile's OKLab L. The dot pops in with a `dot-in` keyframe animation: scale 0 → 1, 280 ms, a slight overshoot, and a 120 ms delay so it lands as the swap animation finishes. Corners show no dot. Mark them as fixed with a subtly different treatment, such as a slightly smaller radius or an inset ring.
+- **Haptics** (`haptics.ts`): after each swap, `swapOutcome(board, a, b)` (in `puzzle.ts`) returns `'solved' | 'placed' | 'none'`. Call `success()` for solved and `tap()` for placed. `App.handleSwap` makes these calls, and it runs from the pointerup handler (through `flushSync`), so the haptics fire inside the user gesture. Keep it that way, because iOS ignores the switch trick outside a gesture.
   - Use `navigator.vibrate` where it exists (Android Chrome). Use a short pulse of about 12 ms for `tap()` and a pattern such as `[20, 40, 20, 40, 60]` for `success()`.
-  - iOS Safari has no Vibration API. As best-effort progressive enhancement, programmatically click the `<label>` of a hidden `<input type="checkbox" switch>`. This triggers the system haptic on iOS 18+. Feature-detect this, never throw, and accept no haptics on unsupported browsers.
+  - iOS Safari has no Vibration API. As best-effort progressive enhancement, when `'switch' in HTMLInputElement.prototype`, create a `display: none` `<label>` wrapping an `<input type="checkbox" switch>`, append it to `<head>`, click the label, and remove it. This plays the system haptic on iOS 18+. `success()` on iOS is three ticks 90 ms apart. Never throw, and accept no haptics on unsupported browsers.
 - **Win animation**: when the board is solved, the grid gaps close to 0 so the gradient becomes one seamless image. A diagonal wave of a gentle scale pulse runs across the tiles, staggered by `(r + c) * 40ms`. Then show the overlay with "Solved" and a **New game** button. Interaction is disabled while the board is solved.
 
 ### Persistence (`storage.ts`)
