@@ -115,6 +115,14 @@ export function maxChroma(L: number, h: number): number {
   return oklabToOklch(toGamut(oklchToOklab({ L, C: 0.5, h }))).C;
 }
 
+/**
+ * Whether marks drawn on this colour should be dark rather than light. OKLab lightness 0.68
+ * is roughly where black and white text have equal contrast.
+ */
+export function needsDarkInk(lab: Oklab): boolean {
+  return lab.L > 0.68;
+}
+
 /** CSS hex string, e.g. `#3a7bd5`. Assumes an in-gamut colour; channels are clamped. */
 export function toCss(lab: Oklab): string {
   const { r, g, b } = oklabToSrgb(lab);

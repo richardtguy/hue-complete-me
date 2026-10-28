@@ -29,10 +29,36 @@
   min-height: 0;
 }
 
-/* Stand-in for the board until milestone 3; uses the same sizing rule. */
-.app__board-placeholder {
-  width: var(--board-size);
-  aspect-ratio: 1;
-  border-radius: var(--tile-radius);
+.app__icon-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+
+.app__icon-button:active {
   background: var(--surface);
+  color: var(--text);
+}
+
+.app__icon-button:focus-visible {
+  outline: 2px solid var(--text-muted);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .app__icon-button:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
 }

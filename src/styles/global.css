@@ -14,7 +14,6 @@
     100dvh - var(--header-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2 *
       var(--gutter)
   );
-  --tile-radius: 6px;
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 

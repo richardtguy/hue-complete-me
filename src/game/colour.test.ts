@@ -4,6 +4,7 @@ import {
   isInGamut,
   maxChroma,
   mixOklab,
+  needsDarkInk,
   oklabToOklch,
   oklabToSrgb,
   oklchToOklab,
@@ -92,6 +93,15 @@ describe('gamut mapping', () => {
     const C = maxChroma(0.6, 30);
     expect(isInGamut(oklchToOklab({ L: 0.6, C, h: 30 }))).toBe(true);
     expect(isInGamut(oklchToOklab({ L: 0.6, C: C + 0.005, h: 30 }))).toBe(false);
+  });
+});
+
+describe('needsDarkInk', () => {
+  it('picks dark ink on light colours and light ink on dark ones', () => {
+    expect(needsDarkInk(srgbToOklab({ r: 1, g: 1, b: 1 }))).toBe(true);
+    expect(needsDarkInk(srgbToOklab({ r: 1, g: 0.9, b: 0.3 }))).toBe(true);
+    expect(needsDarkInk(srgbToOklab({ r: 0, g: 0, b: 0 }))).toBe(false);
+    expect(needsDarkInk(srgbToOklab({ r: 0.2, g: 0.3, b: 0.7 }))).toBe(false);
   });
 });
 

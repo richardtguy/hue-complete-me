@@ -76,6 +76,11 @@ src/
 
 Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 
+### Rendering (`Board.tsx`)
+
+- Tiles are rendered in **tile-id order** (keyed by tile id) and placed with `grid-row` / `grid-column` from their current position. When a tile moves, only its grid coordinates change, so its DOM element stays the same. FLIP animation and `setPointerCapture` both depend on this, so don't render tiles in position order.
+- Tile colours come from the per-game `colours` array (indexed by tile id). The dot and the corner ring use `--ink`, which is white or dark depending on `needsDarkInk(colour)` (OKLab L > 0.68).
+
 ### Board model (`puzzle.ts`)
 
 - `N = 5`. Positions are indices `0..24` in row-major order: `row = Math.floor(i / N)`, `col = i % N`.
@@ -131,7 +136,7 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 - Size the board as a square: `min(100vw, 100dvh - header) - gutters`, capped at about 520px on desktop. Use a small gap between tiles (about 1.5% of board width) and slightly rounded corners.
 - Use a quiet neutral background (near-black in dark mode, off-white in light mode, following `prefers-color-scheme`) so the tile colours carry the design. Keep chrome to a minimal title and a "New game" icon button.
 - The viewport meta tag should include `viewport-fit=cover`. Set `theme-color` for both schemes.
-- Accessibility: each tile is a `role="gridcell"` with an `aria-label` that says whether it's in place. Animations respect reduced motion. (Keyboard swapping is a possible later addition and isn't in scope.)
+- Accessibility: the board is a `role="group"`, and each tile is a `role="img"` with an `aria-label` giving its row, column and whether it's in place. (ARIA `gridcell`s must sit inside `row` elements, which would force tiles to change parents when they move between rows. That rules them out; see _Rendering_ below.) Animations respect reduced motion. (Keyboard swapping is a possible later addition and isn't in scope.)
 
 ## PWA and deployment
 

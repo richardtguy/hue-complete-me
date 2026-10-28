@@ -1,0 +1,28 @@
+.tile {
+  position: relative;
+  border-radius: var(--tile-radius);
+  background: var(--tile-colour);
+}
+
+.tile--light-ink {
+  --ink: rgb(255 255 255 / 0.92);
+}
+
+.tile--dark-ink {
+  --ink: rgb(20 20 24 / 0.78);
+}
+
+/* Corners are anchors: squarer, with a faint inset ring. */
+.tile--fixed {
+  border-radius: calc(var(--tile-radius) * 0.4);
+  box-shadow: inset 0 0 0 calc(var(--board-size) * 0.006)
+    color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+/* Tiles are square, so equal percentages make a circle. */
+.tile__dot {
+  position: absolute;
+  inset: 43%;
+  border-radius: 50%;
+  background: var(--ink);
+}
