@@ -34,6 +34,7 @@ analytics) unless the user asks.
 - **vite-plugin-pwa** for the manifest and the Workbox service worker
 - **Vitest** for unit tests of the pure game logic
 - ESLint (flat config: typescript-eslint, react-hooks, react-refresh) and Prettier (single quotes, width 100)
+- Write only the **unprefixed** form of CSS properties that need vendor prefixes, such as `backdrop-filter`. Vite's CSS minifier adds the prefixes. If you write both forms, it keeps only the `-webkit-` one, which Chrome ignores.
 - npm as the package manager
   - npm 10 crashes (`reading 'edgesOut'`) when adding vitest 4. Run `npx npm@11 install ...` to add or upgrade dev dependencies. `npm ci` and `npm install` from the lockfile work with npm 10.
 
@@ -123,7 +124,7 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 - **Haptics** (`haptics.ts`): after each swap, `swapOutcome(board, a, b)` (in `puzzle.ts`) returns `'solved' | 'placed' | 'none'`. Call `success()` for solved and `tap()` for placed. `App.handleSwap` makes these calls, and it runs from the pointerup handler (through `flushSync`), so the haptics fire inside the user gesture. Keep it that way, because iOS ignores the switch trick outside a gesture.
   - Use `navigator.vibrate` where it exists (Android Chrome). Use a short pulse of about 12 ms for `tap()` and a pattern such as `[20, 40, 20, 40, 60]` for `success()`.
   - iOS Safari has no Vibration API. As best-effort progressive enhancement, when `'switch' in HTMLInputElement.prototype`, create a `display: none` `<label>` wrapping an `<input type="checkbox" switch>`, append it to `<head>`, click the label, and remove it. This plays the system haptic on iOS 18+. `success()` on iOS is three ticks 90 ms apart. Never throw, and accept no haptics on unsupported browsers.
-- **Win animation**: when the board is solved, the grid gaps close to 0 so the gradient becomes one seamless image. A diagonal wave of a gentle scale pulse runs across the tiles, staggered by `(r + c) * 40ms`. Then show the overlay with "Solved" and a **New game** button. Interaction is disabled while the board is solved.
+- **Win animation** (CSS only, no timers; timings are custom properties on `.board--solved` in `Board.css`): when the board is solved, `Board` gets `board--solved` and locks. After 400 ms, when the last swap has landed, the gap closes to 0 over 500 ms, tiles lose their radius, and dots and corner rings fade, leaving one seamless image. From 900 ms a diagonal `wave` (scale 1.05 plus brightness) runs across the tiles, staggered by `--diag` (row + col, set per tile) × 40 ms. At 1700 ms `WinOverlay` fades in: a small frosted card **centred over the board** with "Solved" and **New game**. It's a card rather than a full overlay so the finished gradient stays visible, and it fits in landscape, where there's no room below the board. The card is `visibility: hidden` until its animation starts, so it can't be tapped early. Starting a new game removes the class, and the gaps reopen.
 
 ### Persistence (`storage.ts`)
 
@@ -134,7 +135,7 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 ## UI and visual design
 
 - Use a mobile-first, full-viewport layout with `height: 100dvh` and `env(safe-area-inset-*)` padding. Set `overscroll-behavior: none` to stop pull-to-refresh, and disable `user-select` and the iOS tap highlight and callout.
-- Size the board as a square: `min(100vw, 100dvh - header) - gutters`, capped at about 520px on desktop. Use a small gap between tiles (about 1.5% of board width) and slightly rounded corners.
+- Size the board as a square: `min(100vw, 100dvh - header) - gutters`, capped at 520px on desktop and **rounded down to a multiple of 5px** (`round()`, behind `@supports`), so that with no gap each tile is whole pixels and the solved board has no sub-pixel seams. Use a small gap between tiles (about 1.5% of board width) and slightly rounded corners.
 - Use a quiet neutral background (near-black in dark mode, off-white in light mode, following `prefers-color-scheme`) so the tile colours carry the design. Keep chrome to a minimal title and a "New game" icon button.
 - The viewport meta tag should include `viewport-fit=cover`. Set `theme-color` for both schemes.
 - Accessibility: the board is a `role="group"`, and each tile is a `role="img"` with an `aria-label` giving its row, column and whether it's in place. (ARIA `gridcell`s must sit inside `row` elements, which would force tiles to change parents when they move between rows. That rules them out; see _Rendering_ below.) Animations respect reduced motion. (Keyboard swapping is a possible later addition and isn't in scope.)

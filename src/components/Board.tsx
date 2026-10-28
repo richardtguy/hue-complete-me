@@ -10,12 +10,13 @@ interface BoardProps {
   /** Solved colour of each tile, indexed by tile id. */
   colours: readonly Oklab[];
   onSwap: (a: number, b: number) => void;
-  disabled: boolean;
+  /** Plays the win sequence and locks the board. */
+  solved: boolean;
 }
 
-export default function Board({ board, colours, onSwap, disabled }: BoardProps) {
+export default function Board({ board, colours, onSwap, solved }: BoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
-  const { onPointerDown } = useDragSwap({ boardRef, board, onSwap, disabled });
+  const { onPointerDown } = useDragSwap({ boardRef, board, onSwap, disabled: solved });
 
   // Render tiles in tile-id order and place them with grid coordinates, so a tile's DOM
   // element stays the same when it moves. Dragging and swap animations rely on this.
@@ -27,7 +28,7 @@ export default function Board({ board, colours, onSwap, disabled }: BoardProps) 
   return (
     <div
       ref={boardRef}
-      className="board"
+      className={solved ? 'board board--solved' : 'board'}
       role="group"
       aria-label="Puzzle board"
       onPointerDown={onPointerDown}

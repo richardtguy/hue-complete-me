@@ -8,4 +8,24 @@
   --tile-radius: calc(var(--board-size) * 0.022);
   /* Pointer drags move tiles, never the page. */
   touch-action: none;
+  transition: gap 300ms var(--ease-out);
+}
+
+/*
+ * Win sequence, all in CSS so no timers need cleaning up:
+ *   0 ms                  last swap lands (about 220 ms) and its dot pops in
+ *   --close-delay         gaps close, tiles square off, dots and corner rings fade
+ *   --wave-start          a diagonal pulse runs across the seamless gradient
+ *   --overlay-delay       the Solved card fades in (WinOverlay.css)
+ */
+.board--solved {
+  --close-delay: 400ms;
+  --close-ms: 500ms;
+  --wave-start: 900ms;
+  --wave-step: 40ms;
+  --wave-ms: 640ms;
+  gap: 0;
+  border-radius: var(--tile-radius);
+  overflow: hidden;
+  transition: gap var(--close-ms) var(--ease-out) var(--close-delay);
 }

@@ -29,6 +29,10 @@
   min-height: 0;
 }
 
+.app__stage {
+  position: relative;
+}
+
 .app__icon-button {
   display: grid;
   place-items: center;

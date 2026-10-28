@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import Board from './components/Board.tsx';
+import WinOverlay from './components/WinOverlay.tsx';
 import type { Oklab } from './game/colour.ts';
 import { generatePalette } from './game/palette.ts';
 import { type Board as BoardState, isSolved, scramble, swap, swapOutcome } from './game/puzzle.ts';
@@ -21,6 +22,8 @@ function newGame(): Game {
 
 export default function App() {
   const [game, setGame] = useState(newGame);
+  const solved = isSolved(game.board);
+  const startNewGame = () => setGame(newGame());
   const handleSwap = useCallback(
     (a: number, b: number) => {
       const board = swap(game.board, a, b);
@@ -41,7 +44,7 @@ export default function App() {
           type="button"
           className="app__icon-button"
           aria-label="New game"
-          onClick={() => setGame(newGame())}
+          onClick={startNewGame}
         >
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <path
@@ -56,12 +59,10 @@ export default function App() {
         </button>
       </header>
       <main className="app__main">
-        <Board
-          board={game.board}
-          colours={game.colours}
-          onSwap={handleSwap}
-          disabled={isSolved(game.board)}
-        />
+        <div className="app__stage">
+          <Board board={game.board} colours={game.colours} onSwap={handleSwap} solved={solved} />
+          {solved && <WinOverlay onNewGame={startNewGame} />}
+        </div>
       </main>
     </div>
   );

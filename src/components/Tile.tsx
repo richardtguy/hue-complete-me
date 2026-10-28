@@ -18,6 +18,8 @@ interface TileProps {
 export default function Tile({ id, colour, row, col, fixed, correct, darkInk }: TileProps) {
   const style = {
     '--tile-colour': colour,
+    // Diagonal index, which staggers the win wave from top-left to bottom-right.
+    '--diag': row + col,
     gridRow: row + 1,
     gridColumn: col + 1,
   } as CSSProperties;

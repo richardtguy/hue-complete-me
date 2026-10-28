@@ -65,3 +65,28 @@
     0 0 0 calc(var(--board-size) * 0.006) var(--bg),
     0 0 0 calc(var(--board-size) * 0.014) var(--text-muted);
 }
+
+/* --- Win sequence (timings on .board--solved in Board.css) --- */
+
+.board--solved .tile {
+  cursor: default;
+  border-radius: 0;
+  box-shadow: none;
+  transition:
+    border-radius var(--close-ms) var(--ease-out) var(--close-delay),
+    box-shadow var(--close-ms) var(--ease-out) var(--close-delay);
+  animation: wave var(--wave-ms) ease-in-out
+    calc(var(--wave-start) + var(--diag) * var(--wave-step));
+}
+
+.board--solved .tile__dot {
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out) var(--close-delay);
+}
+
+@keyframes wave {
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.12);
+  }
+}

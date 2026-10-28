@@ -8,12 +8,13 @@
   --header-height: 56px;
   --board-max: 520px;
   /* Largest square that fits the viewport below the header, inside the gutters. */
-  --board-size: min(
+  --board-fit: min(
     var(--board-max),
     100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 2 * var(--gutter),
     100dvh - var(--header-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2 *
       var(--gutter)
   );
+  --board-size: var(--board-fit);
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
@@ -28,6 +29,13 @@
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
+}
+
+/* Whole-pixel tiles, so the solved board (no gaps) has no sub-pixel seams. */
+@supports (width: round(down, 1px, 1px)) {
+  :root {
+    --board-size: round(down, var(--board-fit), 5px);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
