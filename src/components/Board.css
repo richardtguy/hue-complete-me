@@ -13,15 +13,15 @@
 
 /*
  * Win sequence, all in CSS so no timers need cleaning up:
- *   0 ms                  last swap lands (about 220 ms) and its dot pops in
+ *   0 ms                  last swap lands (300–420 ms) and its dot pops in
  *   --close-delay         gaps close, tiles square off, dots and corner rings fade
  *   --wave-start          a diagonal pulse runs across the seamless gradient
  *   --overlay-delay       the Solved card fades in (WinOverlay.css)
  */
 .board--solved {
-  --close-delay: 400ms;
+  --close-delay: 650ms;
   --close-ms: 500ms;
-  --wave-start: 900ms;
+  --wave-start: 1150ms;
   --wave-step: 40ms;
   --wave-ms: 640ms;
   gap: 0;

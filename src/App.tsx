@@ -32,6 +32,9 @@ function initialGame(): Game {
 
 export default function App() {
   const [game, setGame] = useState(initialGame);
+  // True once the player has swapped this visit, so tiles already in place on a resumed
+  // game don't play the placement pulse.
+  const [live, setLive] = useState(false);
   useEffect(() => saveGame(storage(), game), [game]);
   const solved = isSolved(game.board);
   const startNewGame = () => setGame(newGame());
@@ -39,6 +42,7 @@ export default function App() {
     (a: number, b: number) => {
       const board = swap(game.board, a, b);
       setGame({ ...game, board });
+      setLive(true);
       // Called from the pointerup handler, so haptics run inside the user gesture.
       const outcome = swapOutcome(board, a, b);
       if (outcome === 'solved') success();
@@ -71,7 +75,13 @@ export default function App() {
       </header>
       <main className="app__main">
         <div className="app__stage">
-          <Board board={game.board} colours={game.colours} onSwap={handleSwap} solved={solved} />
+          <Board
+            board={game.board}
+            colours={game.colours}
+            onSwap={handleSwap}
+            solved={solved}
+            live={live}
+          />
           {solved && <WinOverlay onNewGame={startNewGame} />}
         </div>
       </main>

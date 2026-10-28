@@ -10,9 +10,20 @@ import { flushSync } from 'react-dom';
 import { type Board, isCorner, positionAt } from '../game/puzzle.ts';
 
 const LIFT_SCALE = 1.08;
-const LIFT_MS = 120;
-const SETTLE_MS = 220;
-const EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+const LIFT_MS = 160;
+const LIFT_EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+// Swap timings are long enough to follow by eye: the displaced tile is what tells the player
+// a swap happened, so it travels the longest, with an easing that keeps it visibly moving
+// rather than jumping most of the way in the first frames.
+/** The dragged tile settling into its new slot from under the finger. */
+const SETTLE_MS = 300;
+/** The other tile travelling to the vacated slot. */
+const DISPLACED_MS = 420;
+/** A refused drop returning home. */
+const SNAP_BACK_MS = 320;
+const MOVE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+/** How much the displaced tile lifts mid-flight, so it reads as moving over the board. */
+const DISPLACED_LIFT = 1.06;
 
 interface Options {
   boardRef: RefObject<HTMLElement | null>;
@@ -46,19 +57,34 @@ function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Animates `el` from the transform `from` to no transform, then calls `done`. */
-function settle(el: HTMLElement, from: string, done: () => void) {
-  const ms = reducedMotion() ? 0 : SETTLE_MS;
+/**
+ * Animates `el` from the transform `from` to its laid-out position, then calls `done`.
+ * `lift` scales the tile up mid-flight.
+ */
+function settle(el: HTMLElement, from: string, ms: number, done: () => void, lift = 1) {
+  // Removing transform from the transition list cancels any running CSS transition (such as
+  // the drop target's shrink), which would otherwise override the animation.
   el.style.transition = 'none';
-  el.style.transform = from;
-  el.getBoundingClientRect(); // Commit the start state before transitioning.
-  el.style.transition = `transform ${ms}ms ${EASE}`;
   el.style.transform = '';
-  // A timer rather than `transitionend`, which doesn't fire if nothing actually moves.
-  window.setTimeout(() => {
+  const keyframes: Keyframe[] =
+    lift === 1
+      ? [{ transform: from }, { transform: 'none' }]
+      : [
+          { transform: from, scale: 1 },
+          { scale: lift, offset: 0.5 },
+          { transform: 'none', scale: 1 },
+        ];
+  const animation = el.animate(keyframes, {
+    duration: reducedMotion() ? 0 : ms,
+    easing: MOVE_EASE,
+  });
+  // `finished` resolves even when nothing moves (unlike `transitionend`), and rejects if the
+  // animation is cancelled, for example when the tile is removed.
+  const finish = () => {
     el.style.transition = '';
     done();
-  }, ms + 20);
+  };
+  animation.finished.then(finish, finish);
 }
 
 /** The transform that makes an element laid out at `last` appear at `first`. */
@@ -134,7 +160,7 @@ export function useDragSwap({ boardRef, board, onSwap, disabled }: Options) {
       const snapBack = () => {
         animating.current++;
         el.dataset.drag = 'settling';
-        settle(el, el.style.transform, () => {
+        settle(el, el.style.transform, SNAP_BACK_MS, () => {
           delete el.dataset.drag;
           animating.current--;
         });
@@ -154,15 +180,18 @@ export function useDragSwap({ boardRef, board, onSwap, disabled }: Options) {
         animating.current += 2;
         el.dataset.drag = 'settling';
         otherEl.dataset.drag = 'displaced';
-        for (const [tile, first, last] of [
-          [el, firstDragged, lastDragged],
-          [otherEl, firstOther, lastOther],
-        ] as const) {
-          settle(tile, invert(first, last), () => {
-            delete tile.dataset.drag;
-            animating.current--;
-          });
-        }
+        const finish = (tile: HTMLElement) => () => {
+          delete tile.dataset.drag;
+          animating.current--;
+        };
+        settle(el, invert(firstDragged, lastDragged), SETTLE_MS, finish(el));
+        settle(
+          otherEl,
+          invert(firstOther, lastOther),
+          DISPLACED_MS,
+          finish(otherEl),
+          DISPLACED_LIFT,
+        );
       };
 
       const onUp = end(true);
@@ -189,7 +218,7 @@ export function useDragSwap({ boardRef, board, onSwap, disabled }: Options) {
       };
 
       el.dataset.drag = 'lifted';
-      el.style.transition = reducedMotion() ? 'none' : `transform ${LIFT_MS}ms ${EASE}`;
+      el.style.transition = reducedMotion() ? 'none' : `transform ${LIFT_MS}ms ${LIFT_EASE}`;
       el.style.transform = `scale(${LIFT_SCALE})`;
     },
     [boardRef],

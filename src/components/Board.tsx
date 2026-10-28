@@ -12,9 +12,11 @@ interface BoardProps {
   onSwap: (a: number, b: number) => void;
   /** Plays the win sequence and locks the board. */
   solved: boolean;
+  /** Tiles that become correct play the placement pulse. */
+  live: boolean;
 }
 
-export default function Board({ board, colours, onSwap, solved }: BoardProps) {
+export default function Board({ board, colours, onSwap, solved, live }: BoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const { onPointerDown } = useDragSwap({ boardRef, board, onSwap, disabled: solved });
 
@@ -28,7 +30,9 @@ export default function Board({ board, colours, onSwap, solved }: BoardProps) {
   return (
     <div
       ref={boardRef}
-      className={solved ? 'board board--solved' : 'board'}
+      className={['board', live && 'board--live', solved && 'board--solved']
+        .filter(Boolean)
+        .join(' ')}
       role="group"
       aria-label="Puzzle board"
       onPointerDown={onPointerDown}

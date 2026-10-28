@@ -9,7 +9,7 @@ The board is a 5×5 grid. The four corner tiles are fixed, each a different, con
 ## How to play
 
 - **Drag** any non-corner tile onto another to swap the two. They animate into each other's places.
-- A tile in its **correct position** shows a small **dot** in its centre, and your phone gives a little haptic tap.
+- When a tile lands in its **correct position** it pulses and shows a small **dot** in its centre. On Android, your phone also gives a little haptic tap.
 - The four **corners never move**. Use them as anchors and work inwards.
 - When every tile is in place, the gaps close and the board becomes one seamless gradient. Tap **New game** for a fresh palette.
 
@@ -19,7 +19,7 @@ Every game has new, randomly generated corner colours. Your progress is saved au
 
 - Random four-corner palettes with guaranteed contrast, blended in the perceptual **OKLab** colour space for smooth, even steps
 - Touch-first drag-to-swap with smooth swap animations
-- Haptic feedback on Android through the Vibration API, with best-effort support on iOS 18+
+- A visual pulse when a tile lands in place, plus haptic feedback on Android through the Vibration API. iOS Safari doesn't allow web pages to trigger haptics.
 - Correct-tile dots and a celebratory solve animation
 - Auto-saved progress (localStorage)
 - Installable PWA that works offline
