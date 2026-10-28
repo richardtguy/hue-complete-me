@@ -48,6 +48,7 @@ npm run preview    # serve dist/ locally
 npm test           # vitest run
 npm run lint       # eslint + prettier --check
 npm run format     # prettier --write
+npm run icons      # regenerate PWA icons from public/icon.svg
 ```
 
 Before you commit, run `npm run lint`, `npm test` and `npm run build`. All three must pass.
@@ -144,9 +145,11 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 
 ## PWA and deployment
 
-- The Vite `base` is `/hue-complete-me/` for GitHub Pages builds.
-- Configure `vite-plugin-pwa` with `registerType: 'autoUpdate'`, a manifest (name, short_name, `display: standalone`, `orientation: portrait`, theme and background colours) and icons at 192, 512 and maskable 512 in `public/`. Generate the icons from a single SVG of a 2×2 gradient tile motif.
-- `.github/workflows/deploy.yml` runs on push to `main`: install, lint, test, build, then `actions/upload-pages-artifact` and `actions/deploy-pages`.
+- Live at **https://richardtguy.github.io/hue-complete-me/**. The Vite `base` is `/hue-complete-me/` in every mode, including dev and preview.
+- `vite-plugin-pwa` (in `vite.config.ts`) uses `registerType: 'autoUpdate'` and `injectRegister: 'auto'`, which injects `registerSW.js` into `index.html`, so there's no registration code in `main.tsx`. The manifest is `standalone`, `portrait`, with theme and background `#111113`. The plugin's default precache glob (`js`, `css`, `html`) plus `includeAssets` and the manifest icons covers every file. Don't add a `workbox.globPatterns` that overlaps them, because that duplicates precache entries. The service worker only exists in production builds, so test offline behaviour with `npm run build && npm run preview`.
+- **Icons**: `public/icon.svg` is the single source: a 3×3 OKLab gradient mini-board on `#111113`, drawn with the game's own palette logic. It also serves as the SVG favicon. `npm run icons` (`@vite-pwa/assets-generator`, configured in `pwa-assets.config.ts`) regenerates `pwa-64/192/512`, `maskable-icon-512x512` (10% padding, so the grid stays inside Android's 80% safe circle), `apple-touch-icon-180x180` (no padding) and `favicon.ico`. Commit the generated PNGs.
+- **Workflow** (`.github/workflows/deploy.yml`, "CI and deploy"): every pull request and every push to `main` runs `npm ci`, lint, test and build on Node 22. Only pushes to `main` (or a manual run on `main`) upload `dist/` and deploy with `actions/deploy-pages`. Deploys don't cancel each other (concurrency group `pages`). Pages must be set to **Source: GitHub Actions** in the repository settings (done).
+- Actions are pinned to major versions: checkout v7, setup-node v7, upload-pages-artifact v5, deploy-pages v5.
 
 ## Build plan (milestones)
 
