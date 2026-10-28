@@ -15,35 +15,39 @@ in place.
 
 ## Decisions (agreed with the user)
 
-| Topic | Decision |
-|---|---|
-| Corner colours | Random each game, with guaranteed contrast (see *Palette generation*) |
-| Blending | Bilinear interpolation in **OKLab** |
-| Extras | Win animation and saved progress (localStorage). No move counter and no grid-size option for now. |
-| Hosting | GitHub Pages via GitHub Actions, as a PWA (manifest and service worker, offline play, add to home screen) |
+| Topic          | Decision                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| Corner colours | Random each game, with guaranteed contrast (see _Palette generation_)                                     |
+| Blending       | Bilinear interpolation in **OKLab**                                                                       |
+| Extras         | Win animation and saved progress (localStorage). No move counter and no grid-size option for now.         |
+| Hosting        | GitHub Pages via GitHub Actions, as a PWA (manifest and service worker, offline play, add to home screen) |
 
 Don't add features outside this list (move counter, timers, sizes, sound, accounts,
 analytics) unless the user asks.
 
 ## Tech stack
 
-- **Vite + React 18 + TypeScript** (strict mode)
+- **Vite 8 + React 19 + TypeScript 6.0** (strict mode, `noUncheckedIndexedAccess`)
+  - TypeScript is pinned to `~6.0` because typescript-eslint doesn't support TS 7 yet. Don't bump it until typescript-eslint does.
 - Plain CSS with custom properties (one global stylesheet plus a CSS file per component). No UI framework.
 - **No drag or animation libraries.** Use Pointer Events and CSS transforms/transitions with FLIP.
 - **vite-plugin-pwa** for the manifest and the Workbox service worker
 - **Vitest** for unit tests of the pure game logic
-- ESLint and Prettier with default configs
+- ESLint (flat config: typescript-eslint, react-hooks, react-refresh) and Prettier (single quotes, width 100)
+- Write only the **unprefixed** form of CSS properties that need vendor prefixes, such as `backdrop-filter`. Vite's CSS minifier adds the prefixes. If you write both forms, it keeps only the `-webkit-` one, which Chrome ignores.
 - npm as the package manager
+  - npm 10 crashes (`reading 'edgesOut'`) when adding vitest 4. Run `npx npm@11 install ...` to add or upgrade dev dependencies. `npm ci` and `npm install` from the lockfile work with npm 10.
 
 ## Commands
 
 ```bash
 npm install
-npm run dev        # Vite dev server (use --host to test on a phone over LAN)
+npm run dev        # Vite dev server at http://localhost:5173/hue-complete-me/ (--host for LAN)
 npm run build      # type-check + production build to dist/
 npm run preview    # serve dist/ locally
 npm test           # vitest run
-npm run lint
+npm run lint       # eslint + prettier --check
+npm run format     # prettier --write
 ```
 
 Before you commit, run `npm run lint`, `npm test` and `npm run build`. All three must pass.
@@ -73,6 +77,11 @@ src/
 
 Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 
+### Rendering (`Board.tsx`)
+
+- Tiles are rendered in **tile-id order** (keyed by tile id) and placed with `grid-row` / `grid-column` from their current position. When a tile moves, only its grid coordinates change, so its DOM element stays the same. FLIP animation and `setPointerCapture` both depend on this, so don't render tiles in position order.
+- Tile colours come from the per-game `colours` array (indexed by tile id). The dot and the corner ring use `--ink`, which is white or dark depending on `needsDarkInk(colour)` (OKLab L > 0.68).
+
 ### Board model (`puzzle.ts`)
 
 - `N = 5`. Positions are indices `0..24` in row-major order: `row = Math.floor(i / N)`, `col = i % N`.
@@ -88,47 +97,50 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
   `top = lerp(TL, TR, u)`, `bottom = lerp(BL, BR, u)`, `colour = lerp(top, bottom, v)`.
 - Convert back to sRGB for display. Clamp out-of-gamut colours by reducing OKLCH chroma at constant L and h, not by naively clipping channels.
 - **Palette generation** (`randomCorners(rng)`):
-  - Choose a random base hue and place the four corners about 90° apart (±20° jitter), in a random order.
+  - Choose a random base hue and place the four corners about 90° apart (±20° jitter), **in order around the square** (TL→TR→BR→BL), with a random starting corner and direction. Diagonal lightness cancels along the middle row and column, so hue is the only difference there. Other arrangements can cancel the hue difference too and leave identical neighbours: only about 34% of random arrangements pass validation, against about 99% for cyclic ones.
   - Vary lightness across the corners: one diagonal pair lighter (L ≈ 0.75–0.88) and the other darker (L ≈ 0.45–0.6). This gives the grid a luminance gradient as well as a hue gradient.
   - Use chroma that is as high as fits in gamut, around 0.10–0.18.
-  - Validate the result. Compute the OKLab ΔE between every pair of horizontally and vertically adjacent tiles. If the minimum is below a threshold (start at about 0.03 and tune by eye), regenerate. The puzzle must be solvable by eye.
-- Pre-compute the 25 solved colours once per game and store them with the save.
+  - Validate the result. Compute the OKLab ΔE between every pair of horizontally and vertically adjacent tiles. If the minimum is below `MIN_NEIGHBOUR_DELTA_E` (0.03, to be tuned by eye in milestone 9), regenerate, up to 50 attempts, keeping the best. The puzzle must be solvable by eye. Typical minimum ΔE is about 0.04, limited by the hue-only steps in the middle row and column.
+- Pre-compute the 25 solved colours once per game (`generatePalette`) and store them with the save.
 
 ### Drag and swap (`useDragSwap.ts`)
 
 - Use Pointer Events only (`pointerdown/move/up/cancel`) with `setPointerCapture`. The board has `touch-action: none` so the page doesn't scroll or zoom while dragging.
 - On drag start, lift the tile with `scale(1.08)`, a shadow and a raised z-index. While dragging it follows the pointer through `transform: translate(...)` set directly on the element. Don't call React setState per pointermove, because it causes jank.
-- Hit-test the drop target from the pointer position against the cached board rect (`Math.floor` on row and column). Don't use `elementFromPoint`, because the dragged tile sits under the finger. Highlight the current target tile.
+- Hit-test the drop target with `positionAt` (in `puzzle.ts`) from the pointer position against the board rect cached at drag start. Don't use `elementFromPoint`, because the dragged tile sits under the finger. The current target tile shrinks to `scale(0.9)` and gets a ring.
 - **On drop over a valid, different interior tile**, swap with FLIP:
   1. Record the screen rects of both elements.
-  2. Commit the swap to state.
-  3. In `useLayoutEffect`, apply inverse transforms, then on the next frame transition to `transform: none`. Use about 220 ms with `cubic-bezier(.2,.8,.2,1)`.
-  The dragged tile settles from where the finger released it, and the displaced tile glides to the vacated slot.
+  2. Commit the swap inside `flushSync`, so React updates the DOM synchronously, then clear the dragged tile's inline transform and measure both rects again.
+  3. Apply the inverse transforms and transition to `transform: none` over 220 ms with `cubic-bezier(.2,.8,.2,1)`.
+     The dragged tile settles from where the finger released it, and the displaced tile glides to the vacated slot.
 - **On drop anywhere else** (a corner, outside the board or the same slot), animate the tile back to its home.
-- Ignore new drags while a swap animation is running. Cancel cleanly on `pointercancel`.
-- Respect `prefers-reduced-motion`. Use a short fade or no transition instead of motion.
+- Ignore new drags while a swap or snap-back animation is running. Animations end on a timer, not `transitionend`, which doesn't fire when nothing moves. Cancel cleanly on `pointercancel` or `lostpointercapture`.
+- **Drag state lives in `data-*` attributes, not classes**: `data-drag="lifted|settling|displaced"` and `data-target`. React rewrites `className` when a tile re-renders, for example when it becomes correct mid-swap, which would wipe classes added imperatively.
+- Respect `prefers-reduced-motion`. Settling is instant (0 ms) and the lift isn't animated; the tile still follows the finger, because that is direct manipulation.
 
 ### Feedback
 
-- **Dot**: a correctly placed interior tile shows a small centred dot, about 14% of the tile width. Choose white or near-black for the dot based on the tile's OKLab L. The dot appears with a short scale-in. Corners show no dot. Mark them as fixed with a subtly different treatment, such as a slightly smaller radius or an inset ring.
-- **Haptics** (`haptics.ts`): after each swap, if either swapped tile became correct, call `tap()`. When the board is solved, call `success()`.
+- **Dot**: a correctly placed interior tile shows a small centred dot, about 14% of the tile width. Choose white or near-black for the dot based on the tile's OKLab L. The dot pops in with a `dot-in` keyframe animation: scale 0 → 1, 280 ms, a slight overshoot, and a 120 ms delay so it lands as the swap animation finishes. Corners show no dot. Mark them as fixed with a subtly different treatment, such as a slightly smaller radius or an inset ring.
+- **Haptics** (`haptics.ts`): after each swap, `swapOutcome(board, a, b)` (in `puzzle.ts`) returns `'solved' | 'placed' | 'none'`. Call `success()` for solved and `tap()` for placed. `App.handleSwap` makes these calls, and it runs from the pointerup handler (through `flushSync`), so the haptics fire inside the user gesture. Keep it that way, because iOS ignores the switch trick outside a gesture.
   - Use `navigator.vibrate` where it exists (Android Chrome). Use a short pulse of about 12 ms for `tap()` and a pattern such as `[20, 40, 20, 40, 60]` for `success()`.
-  - iOS Safari has no Vibration API. As best-effort progressive enhancement, programmatically click the `<label>` of a hidden `<input type="checkbox" switch>`. This triggers the system haptic on iOS 18+. Feature-detect this, never throw, and accept no haptics on unsupported browsers.
-- **Win animation**: when the board is solved, the grid gaps close to 0 so the gradient becomes one seamless image. A diagonal wave of a gentle scale pulse runs across the tiles, staggered by `(r + c) * 40ms`. Then show the overlay with "Solved" and a **New game** button. Interaction is disabled while the board is solved.
+  - iOS Safari has no Vibration API. As best-effort progressive enhancement, when `'switch' in HTMLInputElement.prototype`, create a `display: none` `<label>` wrapping an `<input type="checkbox" switch>`, append it to `<head>`, click the label, and remove it. This plays the system haptic on iOS 18+. `success()` on iOS is three ticks 90 ms apart. Never throw, and accept no haptics on unsupported browsers.
+- **Win animation** (CSS only, no timers; timings are custom properties on `.board--solved` in `Board.css`): when the board is solved, `Board` gets `board--solved` and locks. After 400 ms, when the last swap has landed, the gap closes to 0 over 500 ms, tiles lose their radius, and dots and corner rings fade, leaving one seamless image. From 900 ms a diagonal `wave` (scale 1.05 plus brightness) runs across the tiles, staggered by `--diag` (row + col, set per tile) × 40 ms. At 1700 ms `WinOverlay` fades in: a small frosted card **centred over the board** with "Solved" and **New game**. It's a card rather than a full overlay so the finished gradient stays visible, and it fits in landscape, where there's no room below the board. The card is `visibility: hidden` until its animation starts, so it can't be tapped early. Starting a new game removes the class, and the gaps reopen.
 
 ### Persistence (`storage.ts`)
 
-- The localStorage key is `hue-complete-me:v1`. The value is `{ version: 1, corners, board, solved }`.
-- Save after every swap and on new game. Load on startup and validate the shape. On any error or mismatch, start a fresh game.
-- Wrap every storage access in try/catch, because private mode or blocked storage can throw.
+- The localStorage key is `hue-complete-me:v1`. The value is `{ version: 1, colours, board }`. `colours` holds the 25 solved OKLab colours (not just the corners), so a resumed game looks identical even if the palette code changes. `solved` isn't stored, because it's derived from `board`.
+- `storage.ts` stays free of DOM globals. `loadGame(storage)` and `saveGame(storage, game)` take a `Storage | undefined`, and `App` passes `window.localStorage`, using `undefined` if even accessing it throws.
+- `parseSave` validates everything: the version, 25 finite OKLab colours, and a board that is a permutation of 0–24 with the corners in place. Anything else returns `null`.
+- `App` saves in an effect whenever `game` changes, which covers every swap and new game. On startup it resumes the save unless there is none, it's invalid, or **it's already solved**; in those cases it starts a new game rather than replaying the win sequence.
+- `loadGame` and `saveGame` never throw. Private mode, blocked storage or a full quota just means no saving.
 
 ## UI and visual design
 
 - Use a mobile-first, full-viewport layout with `height: 100dvh` and `env(safe-area-inset-*)` padding. Set `overscroll-behavior: none` to stop pull-to-refresh, and disable `user-select` and the iOS tap highlight and callout.
-- Size the board as a square: `min(100vw, 100dvh - header) - gutters`, capped at about 520px on desktop. Use a small gap between tiles (about 1.5% of board width) and slightly rounded corners.
+- Size the board as a square: `min(100vw, 100dvh - header) - gutters`, capped at 520px on desktop and **rounded down to a multiple of 5px** (`round()`, behind `@supports`), so that with no gap each tile is whole pixels and the solved board has no sub-pixel seams. Use a small gap between tiles (about 1.5% of board width) and slightly rounded corners.
 - Use a quiet neutral background (near-black in dark mode, off-white in light mode, following `prefers-color-scheme`) so the tile colours carry the design. Keep chrome to a minimal title and a "New game" icon button.
 - The viewport meta tag should include `viewport-fit=cover`. Set `theme-color` for both schemes.
-- Accessibility: each tile is a `role="gridcell"` with an `aria-label` that says whether it's in place. Animations respect reduced motion. (Keyboard swapping is a possible later addition and isn't in scope.)
+- Accessibility: the board is a `role="group"`, and each tile is a `role="img"` with an `aria-label` giving its row, column and whether it's in place. (ARIA `gridcell`s must sit inside `row` elements, which would force tiles to change parents when they move between rows. That rules them out; see _Rendering_ below.) Animations respect reduced motion. (Keyboard swapping is a possible later addition and isn't in scope.)
 
 ## PWA and deployment
 

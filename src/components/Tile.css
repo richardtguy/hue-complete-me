@@ -1,0 +1,92 @@
+.tile {
+  position: relative;
+  border-radius: var(--tile-radius);
+  background: var(--tile-colour);
+  transition:
+    transform 150ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+
+.tile--light-ink {
+  --ink: rgb(255 255 255 / 0.92);
+}
+
+.tile--dark-ink {
+  --ink: rgb(20 20 24 / 0.78);
+}
+
+/* Corners are anchors: squarer, with a faint inset ring. */
+.tile--fixed {
+  border-radius: calc(var(--tile-radius) * 0.4);
+  box-shadow: inset 0 0 0 calc(var(--board-size) * 0.006)
+    color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+/* Tiles are square, so equal percentages make a circle. */
+.tile__dot {
+  position: absolute;
+  inset: 43%;
+  border-radius: 50%;
+  background: var(--ink);
+  /* Pops in as the tile lands: the swap animation takes about 220 ms. */
+  animation: dot-in 280ms cubic-bezier(0.3, 1.6, 0.5, 1) 120ms backwards;
+}
+
+@keyframes dot-in {
+  from {
+    transform: scale(0);
+  }
+}
+
+.tile:not(.tile--fixed) {
+  cursor: grab;
+}
+
+.tile[data-drag='displaced'] {
+  z-index: 1;
+}
+
+.tile[data-drag='lifted'],
+.tile[data-drag='settling'] {
+  z-index: 2;
+}
+
+.tile[data-drag='lifted'] {
+  cursor: grabbing;
+  box-shadow:
+    0 12px 28px rgb(0 0 0 / 0.28),
+    0 3px 8px rgb(0 0 0 / 0.18);
+}
+
+/* The tile that will swap if the pointer is released now: it shrinks to make room. */
+.tile[data-target] {
+  transform: scale(0.9);
+  box-shadow:
+    0 0 0 calc(var(--board-size) * 0.006) var(--bg),
+    0 0 0 calc(var(--board-size) * 0.014) var(--text-muted);
+}
+
+/* --- Win sequence (timings on .board--solved in Board.css) --- */
+
+.board--solved .tile {
+  cursor: default;
+  border-radius: 0;
+  box-shadow: none;
+  transition:
+    border-radius var(--close-ms) var(--ease-out) var(--close-delay),
+    box-shadow var(--close-ms) var(--ease-out) var(--close-delay);
+  animation: wave var(--wave-ms) ease-in-out
+    calc(var(--wave-start) + var(--diag) * var(--wave-step));
+}
+
+.board--solved .tile__dot {
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out) var(--close-delay);
+}
+
+@keyframes wave {
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.12);
+  }
+}
