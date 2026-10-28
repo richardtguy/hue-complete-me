@@ -67,6 +67,51 @@
     0 0 0 calc(var(--board-size) * 0.014) var(--text-muted);
 }
 
+/*
+ * Placement pulse: when a swap puts a tile in place, it pops (scale plus a brightness flash)
+ * and a ring ripples out into the gaps. It's the main cue on iPhones, which have no web
+ * haptics. It starts at 420 ms, once the swap's animations (300–420 ms, which also use
+ * `scale`) have finished, so they never overlap. The ring uses the text colour so it shows
+ * against the page in both themes. Only on a live board, so tiles already in place on a
+ * resumed game stay still.
+ */
+.board--live .tile--correct {
+  animation: placed-pop 460ms cubic-bezier(0.3, 0.7, 0.4, 1) 420ms;
+}
+
+.board--live .tile--correct::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: placed-ring 640ms var(--ease-out) 420ms backwards;
+}
+
+@keyframes placed-pop {
+  /* Raised above its neighbours only while the pulse runs. */
+  0%,
+  100% {
+    z-index: 1;
+  }
+  35% {
+    scale: 1.07;
+    filter: brightness(1.15) saturate(1.1);
+  }
+}
+
+@keyframes placed-ring {
+  from {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--text) 45%, transparent);
+  }
+  to {
+    opacity: 0;
+    box-shadow: 0 0 0 calc(var(--board-size) * 0.03)
+      color-mix(in srgb, var(--text) 45%, transparent);
+  }
+}
+
 /* --- Win sequence (timings on .board--solved in Board.css) --- */
 
 .board--solved .tile {
