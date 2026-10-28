@@ -11,13 +11,14 @@ The board is a 5×5 grid. The four corner tiles are fixed, each a different, con
 - **Drag** any non-corner tile onto another to swap the two. They animate into each other's places.
 - When a tile lands in its **correct position** it pulses and shows a small **dot** in its centre. On Android, your phone also gives a little haptic tap.
 - The four **corners never move**. Use them as anchors and work inwards.
-- When every tile is in place, the gaps close and the board becomes one seamless gradient. Tap **New game** for a fresh palette.
+- When every tile is in place, the gaps close and the board becomes one seamless gradient.
+- There's **one puzzle a day**, the same for everyone. Once you've solved it, come back tomorrow (after your local midnight) for new colours.
 
-Every game has new, randomly generated corner colours. Your progress is saved automatically, so you can close the tab and carry on later. You can also install the game to your home screen and play offline.
+Each day brings new corner colours, generated from the date. Your progress is saved automatically, so you can close the tab and carry on later. You can also install the game to your home screen and play offline.
 
 ## Features
 
-- Random four-corner palettes with guaranteed contrast, blended in the perceptual **OKLab** colour space for smooth, even steps
+- A daily four-corner palette, the same for every player, with guaranteed contrast, blended in the perceptual **OKLab** colour space for smooth, even steps
 - Touch-first drag-to-swap with smooth swap animations
 - A visual pulse when a tile lands in place, plus haptic feedback on Android through the Vibration API. iOS Safari doesn't allow web pages to trigger haptics.
 - Correct-tile dots and a celebratory solve animation

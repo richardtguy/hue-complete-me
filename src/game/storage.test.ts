@@ -28,7 +28,7 @@ function throwingStorage(): Storage {
 function sampleGame(seed = 1): Game {
   const rng = mulberry32(seed);
   const { colours } = generatePalette(rng);
-  return { colours, board: scramble(rng) };
+  return { date: '2026-10-28', colours, board: scramble(rng) };
 }
 
 describe('save round trip', () => {
@@ -51,7 +51,14 @@ describe('save round trip', () => {
   it('stores under the versioned key', () => {
     const storage = memoryStorage();
     saveGame(storage, sampleGame());
-    expect(JSON.parse(storage.getItem(STORAGE_KEY)!).version).toBe(1);
+    expect(JSON.parse(storage.getItem(STORAGE_KEY)!).version).toBe(2);
+  });
+
+  it('removes the old v1 save', () => {
+    const storage = memoryStorage();
+    storage.setItem('hue-complete-me:v1', '{}');
+    saveGame(storage, sampleGame());
+    expect(storage.getItem('hue-complete-me:v1')).toBeNull();
   });
 });
 
@@ -81,7 +88,9 @@ describe('parseSave rejects bad data', () => {
     ['not JSON', '{oops'],
     ['null', 'null'],
     ['a number', '42'],
-    ['another version', withChanges({ version: 2 })],
+    ['another version', withChanges({ version: 1 })],
+    ['no date', withChanges({ date: undefined })],
+    ['a malformed date', withChanges({ date: '28/10/2026' })],
     ['no version', withChanges({ version: undefined })],
     ['a short board', withChanges({ board: valid.board.slice(1) })],
     ['a repeated tile', withChanges({ board: [...valid.board.slice(0, 24), valid.board[1]] })],

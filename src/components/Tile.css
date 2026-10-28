@@ -136,3 +136,8 @@
     filter: brightness(1.12);
   }
 }
+
+/* A day solved on an earlier visit: show the finished gradient at once, without the wave. */
+.board--solved:not(.board--live) .tile {
+  animation: none;
+}

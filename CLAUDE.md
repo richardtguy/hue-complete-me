@@ -15,15 +15,15 @@ in place.
 
 ## Decisions (agreed with the user)
 
-| Topic          | Decision                                                                                                  |
-| -------------- | --------------------------------------------------------------------------------------------------------- |
-| Corner colours | Random each game, with guaranteed contrast (see _Palette generation_)                                     |
-| Blending       | Bilinear interpolation in **OKLab**                                                                       |
-| Extras         | Win animation and saved progress (localStorage). No move counter and no grid-size option for now.         |
-| Hosting        | GitHub Pages via GitHub Actions, as a PWA (manifest and service worker, offline play, add to home screen) |
+| Topic          | Decision                                                                                                                                                                                                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Corner colours | **Daily puzzle**: seeded from the player's local date, so everyone gets the same colours and starting scramble each day (see _Daily puzzle_)                                                                                                                                                                                   |
+| Blending       | Bilinear interpolation in **OKLab**                                                                                                                                                                                                                                                                                            |
+| Extras         | Win animation, saved progress (localStorage), placement pulse, and **one puzzle a day**: once solved, the board stays locked until the next day. No move counter, timers or grid-size option. Easy ways round the lock (changing the clock, clearing storage) are acceptable; the aim is to encourage mindful play once a day. |
+| Hosting        | GitHub Pages via GitHub Actions, as a PWA (manifest and service worker, offline play, add to home screen)                                                                                                                                                                                                                      |
 
 Don't add features outside this list (move counter, timers, sizes, sound, accounts,
-analytics) unless the user asks.
+analytics, a way to play extra puzzles) unless the user asks.
 
 ## Tech stack
 
@@ -58,21 +58,23 @@ Before you commit, run `npm run lint`, `npm test` and `npm run build`. All three
 ```
 src/
   main.tsx              React root, PWA registration
-  App.tsx               Game state owner: new game, load/save, win detection
+  App.tsx               Game state owner: today's puzzle, load/save, day rollover, win
   game/                 Pure TypeScript, no React, fully unit-tested
     colour.ts           sRGB <-> linear <-> OKLab/OKLCH, lerp, gamut mapping, CSS output
     palette.ts          Random contrasting corner generation; tile colour grid
     puzzle.ts           Board model, scramble, swap, isCorrect, isSolved
     storage.ts          Versioned localStorage save/load (wrapped in try/catch)
-    random.ts           Seedable PRNG (mulberry32) so tests are deterministic
+    random.ts           Seedable PRNG (mulberry32): seeds the daily puzzle; deterministic tests
+    daily.ts            Date key, date seed, dailyGame(), countdown and date label helpers
   hooks/
     useDragSwap.ts      Pointer-event drag, hit-testing, FLIP swap animation
+    useMinute.ts        Current time to the minute (interval + visibilitychange)
   lib/
     haptics.ts          tap() / success() via the Vibration API (Android)
   components/
     Board.tsx/.css      Grid layout, renders tiles, hosts the drag hook
     Tile.tsx/.css       One tile: colour, "correct" dot, fixed-corner styling
-    WinOverlay.tsx/.css Solved state + "New game"
+    WinOverlay.tsx/.css Solved card with the countdown to the next puzzle
   styles/global.css     Reset, viewport, theme tokens
 ```
 
@@ -125,21 +127,31 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 - **Placement pulse** (`Tile.css`): when a swap puts a tile in place, it pops (`scale` 1.07 plus a brightness flash, 460 ms) and a ring in the text colour (45%) ripples into the gaps (640 ms). It's the main placement cue on iPhones, which have no web haptics. It starts at **420 ms**, when the swap animations have finished: they also animate `scale` and must never overlap with the pulse. The tile is raised (`z-index: 1`) only while the pulse runs, through the keyframes. It only applies under `.board--live`, which `App` sets after the first swap of a visit, so tiles already in place on a resumed game don't pulse on load.
 - **Haptics** (`haptics.ts`): after each swap, `swapOutcome(board, a, b)` (in `puzzle.ts`) returns `'solved' | 'placed' | 'none'`. Call `success()` for solved and `tap()` for placed. These use `navigator.vibrate`: a 12 ms pulse for `tap()` and `[20, 40, 20, 40, 60]` for `success()`. They never throw, and do nothing where unsupported.
   - **No haptics on iOS, by design.** Safari has no Vibration API, and the `<input type="checkbox" switch>` label-click trick doesn't work on current iOS (confirmed on the user's iPhone, and removed). WebKit only plays the switch haptic for a trusted click (`CheckboxInputType::willDispatchClick` checks `state.trusted`), and a script-initiated `label.click()` dispatches an untrusted simulated click (`Element::dispatchSimulatedClick` uses `SimulatedClickSource::Bindings` when the underlying event is untrusted). No other web API triggers iOS haptics. Don't reintroduce it; the placement pulse is the iPhone cue.
-- **Win animation** (CSS only, no timers; timings are custom properties on `.board--solved` in `Board.css`): when the board is solved, `Board` gets `board--solved` and locks. After 650 ms, when the last swap has landed, the gap closes to 0 over 500 ms, tiles lose their radius, and dots and corner rings fade, leaving one seamless image. From 1150 ms a diagonal `wave` (scale 1.05 plus brightness) runs across the tiles, staggered by `--diag` (row + col, set per tile) × 40 ms. At 1950 ms `WinOverlay` fades in: a small frosted card **centred over the board** with "Solved" and **New game**. It's a card rather than a full overlay so the finished gradient stays visible, and it fits in landscape, where there's no room below the board. The card is `visibility: hidden` until its animation starts, so it can't be tapped early. Starting a new game removes the class, and the gaps reopen.
+- **Win animation** (CSS only, no timers; timings are custom properties on `.board--solved` in `Board.css`): when the board is solved, `Board` gets `board--solved` and locks. After 650 ms, when the last swap has landed, the gap closes to 0 over 500 ms, tiles lose their radius, and dots and corner rings fade, leaving one seamless image. From 1150 ms a diagonal `wave` (scale 1.05 plus brightness) runs across the tiles, staggered by `--diag` (row + col, set per tile) × 40 ms. At 1950 ms `WinOverlay` fades in: a small frosted card **centred over the board** with "Solved", "Today's gradient is complete." and a "New colours in 5h 12m" countdown to local midnight. There's no New game button. It's a card rather than a full overlay so the finished gradient stays visible, and it fits in landscape, where there's no room below the board. The card is `visibility: hidden` until its animation starts, so it can't be tapped early. When the next day's puzzle replaces it, the class is removed and the gaps reopen.
+
+### Daily puzzle (`daily.ts`, `App.tsx`)
+
+- `dateKey(now)` is the player's **local** date as `YYYY-MM-DD`, so each player gets a new puzzle at their own midnight. `seedFor(key)` is a 32-bit FNV-1a hash. `dailyGame(key)` seeds `mulberry32` with it, then runs `generatePalette(rng)` followed by `scramble(rng)`, in that order. Everyone on the same date gets identical colours and starting positions.
+  - Changing anything that consumes the RNG (palette generation, scramble, the validation threshold) changes every future day's puzzle, and today's for anyone who hasn't started it yet. That's fine, but keep it in mind.
+  - Palette validation compares floating-point ΔE values against a threshold. In theory, a browser whose `Math.cbrt` or `Math.pow` differs in the last bit could land on the other side of the threshold and get a different palette. This is vanishingly unlikely, so it's accepted.
+- **The game is locked once solved:** there's no New game button. `App` resumes the save if its `date` is today, whether solved or not. Otherwise it starts `dailyGame(today)`. A solved board stays locked, showing the overlay with "New colours in …" until the date changes.
+- **Day rollover:** `useMinute()` re-renders at least every 15 s and on `visibilitychange`. If the current game is solved and `game.date !== today`, `App` replaces it with the new day's puzzle during render (a guarded state update). An **unsolved** puzzle from yesterday can be finished in the open session, and the next load starts today's.
+- The header shows the puzzle's date (`dateLabel`, e.g. "Wed 28 Oct"), not the current date.
+- `live` (set after the first swap of a visit) separates a solve during this visit from a day solved on an earlier visit. Reopening a solved day shows the finished gradient and the card at once (`.board--solved:not(.board--live)` disables the wave; `WinOverlay immediate` skips the fade-in delay).
 
 ### Persistence (`storage.ts`)
 
-- The localStorage key is `hue-complete-me:v1`. The value is `{ version: 1, colours, board }`. `colours` holds the 25 solved OKLab colours (not just the corners), so a resumed game looks identical even if the palette code changes. `solved` isn't stored, because it's derived from `board`.
+- The localStorage key is `hue-complete-me:v2`. The value is `{ version: 2, date, colours, board }`. `saveGame` deletes the old `hue-complete-me:v1` key (from before the daily puzzle). `colours` holds the 25 solved OKLab colours (not just the corners), so a resumed game looks identical even if the palette code changes. `solved` isn't stored, because it's derived from `board`.
 - `storage.ts` stays free of DOM globals. `loadGame(storage)` and `saveGame(storage, game)` take a `Storage | undefined`, and `App` passes `window.localStorage`, using `undefined` if even accessing it throws.
-- `parseSave` validates everything: the version, 25 finite OKLab colours, and a board that is a permutation of 0–24 with the corners in place. Anything else returns `null`.
-- `App` saves in an effect whenever `game` changes, which covers every swap and new game. On startup it resumes the save unless there is none, it's invalid, or **it's already solved**; in those cases it starts a new game rather than replaying the win sequence.
+- `parseSave` validates everything: the version, a `YYYY-MM-DD` date, 25 finite OKLab colours, and a board that is a permutation of 0–24 with the corners in place. Anything else returns `null`.
+- `App` saves in an effect whenever `game` changes, which covers every swap and day rollover. On startup it resumes the save if it's for today (solved or not), and otherwise starts today's puzzle.
 - `loadGame` and `saveGame` never throw. Private mode, blocked storage or a full quota just means no saving.
 
 ## UI and visual design
 
 - Use a mobile-first, full-viewport layout with `height: 100dvh` and `env(safe-area-inset-*)` padding. Set `overscroll-behavior: none` to stop pull-to-refresh, and disable `user-select` and the iOS tap highlight and callout.
 - Size the board as a square: `min(100vw, 100dvh - header) - gutters`, capped at 520px on desktop and **rounded down to a multiple of 5px** (`round()`, behind `@supports`), so that with no gap each tile is whole pixels and the solved board has no sub-pixel seams. Use a small gap between tiles (about 1.5% of board width) and slightly rounded corners.
-- Use a quiet neutral background (near-black in dark mode, off-white in light mode, following `prefers-color-scheme`) so the tile colours carry the design. Keep chrome to a minimal title and a "New game" icon button.
+- Use a quiet neutral background (near-black in dark mode, off-white in light mode, following `prefers-color-scheme`) so the tile colours carry the design. Keep chrome to a minimal title and the puzzle's date.
 - The viewport meta tag should include `viewport-fit=cover`. Set `theme-color` for both schemes.
 - Accessibility: the board is a `role="group"`, and each tile is a `role="img"` with an `aria-label` giving its row, column and whether it's in place. (ARIA `gridcell`s must sit inside `row` elements, which would force tiles to change parents when they move between rows. That rules them out; see _Rendering_ below.) Animations respect reduced motion. (Keyboard swapping is a possible later addition and isn't in scope.)
 
@@ -158,7 +170,7 @@ Keep game logic in `src/game/` free of React and DOM APIs. Components stay thin.
 3. **Static board**: render a scrambled board with correct colours, layout and corner styling. Dots on correct tiles.
 4. **Drag and swap**: `useDragSwap` with lift, follow, target highlight, FLIP swap animation, snap-back and reduced motion.
 5. **Feedback**: haptics module and its wiring, dot animation.
-6. **Win state**: solved detection, seamless gradient and wave animation, overlay, new game.
+6. **Win state**: solved detection, seamless gradient and wave animation, overlay, new game. (New game was later replaced by the daily puzzle lock.)
 7. **Persistence**: storage module, resume on reload.
 8. **PWA and deploy**: plugin config, icons, Pages workflow, offline check.
 9. **Polish**: test on real iOS and Android devices, tune the contrast threshold and animation timings, check against Lighthouse PWA and performance.

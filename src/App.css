@@ -33,36 +33,9 @@
   position: relative;
 }
 
-.app__icon-button {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin-right: -10px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
+.app__date {
+  margin: 0;
   color: var(--text-muted);
-  cursor: pointer;
-  transition:
-    background-color 150ms,
-    color 150ms;
-}
-
-.app__icon-button:active {
-  background: var(--surface);
-  color: var(--text);
-}
-
-.app__icon-button:focus-visible {
-  outline: 2px solid var(--text-muted);
-  outline-offset: 2px;
-}
-
-@media (hover: hover) {
-  .app__icon-button:hover {
-    background: var(--surface);
-    color: var(--text);
-  }
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
 }
