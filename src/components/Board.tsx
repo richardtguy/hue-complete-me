@@ -14,11 +14,14 @@ interface BoardProps {
   solved: boolean;
   /** Tiles that become correct play the placement pulse. */
   live: boolean;
+  /** Hides the colours and locks the board until the player presses Start. */
+  concealed: boolean;
 }
 
-export default function Board({ board, colours, onSwap, solved, live }: BoardProps) {
+export default function Board({ board, colours, onSwap, solved, live, concealed }: BoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
-  const { onPointerDown } = useDragSwap({ boardRef, board, onSwap, disabled: solved });
+  const disabled = solved || concealed;
+  const { onPointerDown } = useDragSwap({ boardRef, board, onSwap, disabled });
 
   // Render tiles in tile-id order and place them with grid coordinates, so a tile's DOM
   // element stays the same when it moves. Dragging and swap animations rely on this.
@@ -30,7 +33,12 @@ export default function Board({ board, colours, onSwap, solved, live }: BoardPro
   return (
     <div
       ref={boardRef}
-      className={['board', live && 'board--live', solved && 'board--solved']
+      className={[
+        'board',
+        live && 'board--live',
+        solved && 'board--solved',
+        concealed && 'board--concealed',
+      ]
         .filter(Boolean)
         .join(' ')}
       role="group"

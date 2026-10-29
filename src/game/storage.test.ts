@@ -28,7 +28,7 @@ function throwingStorage(): Storage {
 function sampleGame(seed = 1): Game {
   const rng = mulberry32(seed);
   const { colours } = generatePalette(rng);
-  return { date: '2026-10-28', colours, board: scramble(rng) };
+  return { date: '2026-10-28', colours, board: scramble(rng), started: true, elapsedMs: 83_250 };
 }
 
 describe('save round trip', () => {
@@ -52,6 +52,15 @@ describe('save round trip', () => {
     const storage = memoryStorage();
     saveGame(storage, sampleGame());
     expect(JSON.parse(storage.getItem(STORAGE_KEY)!).version).toBe(2);
+  });
+
+  it('loads saves from before the timer as not started, with no time', () => {
+    const old = JSON.parse(serialiseGame(sampleGame()));
+    delete old.started;
+    delete old.elapsedMs;
+    const game = parseSave(JSON.stringify(old));
+    expect(game?.started).toBe(false);
+    expect(game?.elapsedMs).toBe(0);
   });
 
   it('removes the old v1 save', () => {
@@ -99,6 +108,9 @@ describe('parseSave rejects bad data', () => {
       'an out-of-range tile',
       withChanges({ board: valid.board.map((t: number) => (t === 6 ? 25 : t)) }),
     ],
+    ['a non-boolean started', withChanges({ started: 'yes' })],
+    ['a negative time', withChanges({ elapsedMs: -1 })],
+    ['a non-numeric time', withChanges({ elapsedMs: '5' })],
     ['missing colours', withChanges({ colours: undefined })],
     ['too few colours', withChanges({ colours: valid.colours.slice(1) })],
     [

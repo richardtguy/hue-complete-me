@@ -43,6 +43,8 @@ describe('dailyGame', () => {
       const key = dateKey(new Date(2026, 0, day));
       const game = dailyGame(key);
       expect(game.date).toBe(key);
+      expect(game.started).toBe(false);
+      expect(game.elapsedMs).toBe(0);
       expect(minNeighbourDeltaE(game.colours)).toBeGreaterThanOrEqual(MIN_NEIGHBOUR_DELTA_E);
       for (const pos of INTERIOR) expect(isCorrect(game.board, pos)).toBe(false);
     }

@@ -8,6 +8,10 @@ export interface Game {
   /** Solved colour of each tile, indexed by tile id. */
   colours: Oklab[];
   board: Board;
+  /** Whether the player has pressed Start: the board is hidden and untimed until then. */
+  started: boolean;
+  /** Time spent on this puzzle so far, excluding time in the background (see timer.ts). */
+  elapsedMs: number;
 }
 
 export const STORAGE_KEY = 'hue-complete-me:v2';
@@ -15,11 +19,15 @@ export const STORAGE_KEY = 'hue-complete-me:v2';
 const LEGACY_KEYS = ['hue-complete-me:v1'];
 const VERSION = 2;
 
+// `started` and `elapsedMs` were added to v2 without a version bump, so saves from before
+// the timer still load: they default to not started, with no time.
 interface SaveV2 {
   version: 2;
   date: string;
   colours: Oklab[];
   board: number[];
+  started: boolean;
+  elapsedMs: number;
 }
 
 function isOklab(x: unknown): x is Oklab {
@@ -46,16 +54,25 @@ export function parseSave(json: string | null): Game | null {
     return null;
   }
   if (typeof data !== 'object' || data === null) return null;
-  const { version, date, colours, board } = data as Record<string, unknown>;
+  const {
+    version,
+    date,
+    colours,
+    board,
+    started = false,
+    elapsedMs = 0,
+  } = data as Record<string, unknown>;
   if (version !== VERSION) return null;
   if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   if (!Array.isArray(colours) || colours.length !== SIZE || !colours.every(isOklab)) return null;
   if (!isBoard(board)) return null;
-  return { date, colours, board };
+  if (typeof started !== 'boolean') return null;
+  if (typeof elapsedMs !== 'number' || !Number.isFinite(elapsedMs) || elapsedMs < 0) return null;
+  return { date, colours, board, started, elapsedMs };
 }
 
-export function serialiseGame({ date, colours, board }: Game): string {
-  const save: SaveV2 = { version: VERSION, date, colours, board: [...board] };
+export function serialiseGame({ date, colours, board, started, elapsedMs }: Game): string {
+  const save: SaveV2 = { version: VERSION, date, colours, board: [...board], started, elapsedMs };
   return JSON.stringify(save);
 }
 

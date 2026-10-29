@@ -2,9 +2,22 @@
   position: relative;
   border-radius: var(--tile-radius);
   background: var(--tile-colour);
+  /* background-color reveals the colours on Start as a diagonal sweep. */
   transition:
     transform 200ms var(--ease-out),
-    box-shadow 200ms var(--ease-out);
+    box-shadow 200ms var(--ease-out),
+    background-color 500ms var(--ease-out) calc(var(--diag) * 35ms);
+}
+
+/* Before Start: plain tiles, so the colours can't be studied off the clock. */
+.board--concealed .tile {
+  background: var(--surface);
+  box-shadow: none;
+  cursor: default;
+}
+
+.board--concealed .tile__dot {
+  display: none;
 }
 
 .tile--light-ink {
