@@ -8,6 +8,7 @@ The board is a 5×5 grid. The four corner tiles are fixed, each a different, con
 
 ## How to play
 
+- Press **Start** to reveal today's colours and start your timer. The timer pauses whenever you leave the app.
 - **Drag** any non-corner tile onto another to swap the two. They animate into each other's places.
 - When a tile lands in its **correct position** it pulses and shows a small **dot** in its centre. On Android, your phone also gives a little haptic tap.
 - The four **corners never move**. Use them as anchors and work inwards.
@@ -22,6 +23,7 @@ Each day brings new corner colours, generated from the date. Your progress is sa
 - Touch-first drag-to-swap with smooth swap animations
 - A visual pulse when a tile lands in place, plus haptic feedback on Android through the Vibration API. iOS Safari doesn't allow web pages to trigger haptics.
 - Correct-tile dots and a celebratory solve animation
+- A personal timer for each day's puzzle that pauses in the background (no leaderboards)
 - Auto-saved progress (localStorage)
 - Installable PWA that works offline
 - Respects `prefers-reduced-motion` and light/dark colour schemes

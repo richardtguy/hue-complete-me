@@ -39,3 +39,8 @@
   font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
 }
+
+.app__clock {
+  color: var(--text);
+  font-weight: 600;
+}

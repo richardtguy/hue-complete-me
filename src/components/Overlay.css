@@ -1,5 +1,5 @@
-/* Centred over the board, leaving the finished gradient visible around it. */
-.win-overlay {
+/* Cards centred over the board (Start and Solved), leaving the board visible around them. */
+.overlay {
   position: absolute;
   inset: 0;
   display: grid;
@@ -7,18 +7,23 @@
   pointer-events: none;
 }
 
-.win-overlay__card {
+.overlay__card {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  max-width: 82%;
   padding: 20px 26px 22px;
   border-radius: 20px;
   background: color-mix(in srgb, var(--bg) 72%, transparent);
   backdrop-filter: blur(16px) saturate(1.4);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
   pointer-events: auto;
-  /* After the win wave (see Board.css). Hidden, and so unclickable, until it starts. */
+}
+
+/* The Solved card waits for the win wave (see Board.css). Hidden, and so unclickable, until
+   its animation starts. */
+.overlay__card--after-win {
   animation: overlay-in 420ms var(--ease-out) 1950ms backwards;
 }
 
@@ -30,24 +35,27 @@
   }
 }
 
-.win-overlay__title {
+.overlay__title {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 650;
   letter-spacing: 0.01em;
 }
 
-.win-overlay__card--immediate {
-  animation: none;
+.overlay__eyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
 }
 
-.win-overlay__text {
+.overlay__text {
   margin: 0;
   color: var(--text-muted);
   text-align: center;
+  text-wrap: balance;
 }
 
-.win-overlay__next {
+.overlay__pill {
   margin: 4px 0 0;
   padding: 8px 16px;
   border-radius: 999px;
@@ -55,4 +63,26 @@
   font-size: 0.9375rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.overlay__button {
+  min-height: 48px;
+  margin: 6px 0 4px;
+  padding: 0 34px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.overlay__button:active {
+  transform: scale(0.97);
+}
+
+.overlay__button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
 }

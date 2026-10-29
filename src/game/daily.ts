@@ -26,7 +26,7 @@ export function seedFor(key: string): number {
 export function dailyGame(key: string): Game {
   const rng = mulberry32(seedFor(key));
   const { colours } = generatePalette(rng);
-  return { date: key, colours, board: scramble(rng) };
+  return { date: key, colours, board: scramble(rng), started: false, elapsedMs: 0 };
 }
 
 /** Milliseconds from `now` until the next local midnight. */
